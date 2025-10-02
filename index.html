@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Formulário de Solução - Fase II (Geral)</title>
     <!-- CORREÇÃO iOS: Garante a escala correta e previne desfiguração no WebKit/iOS -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-app-capable" content="yes">
     <meta name="mobile-web-app-app-capable" content="yes">
     <!-- Carregar Tailwind CSS para estilização moderna e responsiva -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -184,8 +184,8 @@
         </button>
 
         <!-- 3. Submeter por E-mail (Formsspree) -->
-        <!-- Alterado para type="submit" e remove o onclick, usando a action do formulário -->
-        <button type="submit" form="solutionForm" onclick="saveData()" class="fab-button bg-green-600 hover:bg-green-700" style="background-color: var(--color-success);">
+        <!-- O onclick chama a função prepareFormForSubmission() antes de submeter -->
+        <button type="submit" form="solutionForm" onclick="return prepareFormForSubmission()" class="fab-button bg-green-600 hover:bg-green-700" style="background-color: var(--color-success);">
             <svg class="fab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
             <span class="fab-tooltip">Submeter por E-mail</span>
         </button>
@@ -253,7 +253,8 @@
 
                 <!-- Formulário de Vulnerabilidades -->
                 <!-- ENDPOINT Formsspree e método POST para submissão direta -->
-                <form id="solutionForm" action="https://formspree.io/f/mrbeykeyg" method="POST">
+                <!-- ENDPOINT ATUALIZADO: https://formspree.io/f/xjkargqk -->
+                <form id="solutionForm" action="https://formspree.io/f/xjkargqk" method="POST">
                     <div class="space-y-4">
                         <!-- Secção 1: Problemas do Sector (VULNERABILIDADES) -->
                         <h2 class="text-2xl font-semibold mt-6 mb-4 text-gray-700 border-b pb-2 flex flex-col sm:flex-row sm:justify-between items-start sm:items-center">
@@ -279,7 +280,7 @@
                         <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-700 border-b pb-2 flex flex-col sm:flex-row sm:justify-between items-start sm:items-center">
                             <span class="mb-1 sm:mb-0">Notas Críticas da Direção Geral</span>
                             <span class="text-sm text-gray-500 font-normal mt-1 sm:mt-0" id="dg-gestor-name"></span>
-                        </h2>
+                        </h2 >
 
                         <div id="dgNotesSection" class="space-y-2">
                             <!-- Os itens do acordeão serão gerados aqui -->
@@ -385,7 +386,7 @@
                     }
                 ],
                 dgNotes: [
-                    "OS FACTORES QUE CONSIDERAMOS CRITICOS E PROMOTORES DE ROUBO NO ARMAZEM 1 SAO OS SEGUINTE:",
+                    "OS FACTORES QUE CONSIDERAMOS CRITICOS E PROMOTORES DE ROUBO NO SECTOR ARMAZEM 1 SAO OS SEGUINTE:",
                     "Falta de controle e procedimentos no acto de recepcao de productos(deixa espaco para Roubos)",
                     "Falta de controle riguroso no acto de entrega de producto (deixa espaco para roubo)",
                     "Falta de horario de fucionamento do Armazem 1 que permita planificar o tempo que permita fazer contagem diaria de inventario e comparar com o sistema.",
@@ -695,7 +696,7 @@
                     "Falta de integração entre os sectores.",
                     "Ausência de análises de custos.",
                     "Ausência de cruzamentos de informações (Compras, Consumo, Fornecimento, Facturacao).",
-                    "Ausência de cruzamento de informações na área de transporte, consumo combustível vs actividades e kilometros percorridos.",
+                    "Ausência de cruzamentos de informações na área de transporte, consumo combustível vs actividades e kilometros percorridos.",
                     "Ausência no cruzamento de solicitações de clientes com o facturado, monitoramento dos contratos e o já atingido.",
                     "Falta de rigorocidade no controle de fundo de ca",
                     "Permitir pagamentos sem documentos de suporte ( ordem de compra autorizada, recepção de mercadorias com assinatura autorizada, factura )",
@@ -1056,8 +1057,8 @@
                     <div class="accordion-content">
                         <div class="accordion-content-inner">
                             <label for="solution-${key}" class="block text-sm font-medium text-gray-700 mb-1">Proposta de Solução:</label>
-                            <!-- Adicionado name com prefixo para formsspree -->
-                            <textarea id="solution-${key}" name="solution_${key}" data-solution-key="${key}" rows="3" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 print:border-none print:resize-none" placeholder="${placeholderText}" oninput="updateStatus('${key}')" onchange="saveData()"></textarea>
+                            <!-- Adicionado data-title completo e mantido name simples -->
+                            <textarea id="solution-${key}" name="solution_${key}" data-solution-key="${key}" data-title="${title.replace(/"/g, '')}" rows="3" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 print:border-none print:resize-none" placeholder="${placeholderText}" oninput="updateStatus('${key}')" onchange="saveData()"></textarea>
                         </div>
                     </div>
                 </div>
@@ -1150,6 +1151,95 @@
                     statusSpan.classList.add('bg-gray-200');
                 }
             }
+        }
+
+        // --- Funções de Submissão Formsspree (CORREÇÃO CRÍTICA) ---
+
+        /**
+         * 1. Salva o progresso localmente.
+         * 2. Cria campos de input ocultos com os títulos legíveis para o Formsspree.
+         * 3. Retorna true para permitir a submissão do formulário.
+         */
+        function prepareFormForSubmission() {
+            if (!currentSector) {
+                // Notificação de erro: Nenhum setor selecionado
+                console.error("Erro: Nenhum sector selecionado para submissão.");
+                const confirmation = document.getElementById('save-confirmation');
+                confirmation.classList.remove('hidden');
+                confirmation.style.backgroundColor = 'var(--color-danger)';
+                confirmation.innerHTML = '<p class="font-bold">Erro!</p><p class="text-sm">Por favor, selecione um sector para submeter.</p>';
+                 setTimeout(() => {
+                    confirmation.classList.add('hidden');
+                    confirmation.style.backgroundColor = 'var(--color-success)';
+                }, 4000);
+                return false; // Impede a submissão
+            }
+            
+            // 1. Salva o progresso antes de submeter
+            saveData(); 
+
+            const form = document.getElementById('solutionForm');
+            
+            // Remove quaisquer campos ocultos de submissão anteriores
+            form.querySelectorAll('input[type="hidden"]').forEach(input => {
+                // Mantém os campos ocultos que o Formsspree usa internamente
+                if (!input.name.startsWith('_')) {
+                    input.remove();
+                }
+            });
+
+            // --- CORREÇÃO DE LEIBILIDADE E NOTA INTRODUTÓRIA ---
+            
+            // 2. NOTA INTRODUTÓRIA: Adiciona a nota introdutória como campo oculto
+            const introNoteText = document.getElementById('introNote').value.trim();
+            if (introNoteText.length > 0) {
+                 const cleanIntroText = introNoteText.replace(/\n/g, ' '); 
+                 form.insertAdjacentHTML('beforeend', `<input type="hidden" name="Nota Introdutória do Gestor" value="${cleanIntroText}">`);
+            }
+            
+            // 3. CAMPOS GERAIS: Adiciona Gestor e Sector como campos ocultos legíveis
+            form.insertAdjacentHTML('beforeend', `<input type="hidden" name="Gestor Responsável" value="${document.getElementById('gestorName').value}">`);
+            form.insertAdjacentHTML('beforeend', `<input type="hidden" name="Sector" value="${document.getElementById('sector-select').value}">`);
+
+            // 4. Percorre todas as textareas de solução
+            document.querySelectorAll('textarea[data-solution-key]').forEach(textarea => {
+                const solutionText = textarea.value.trim();
+                const title = textarea.getAttribute('data-title') || textarea.id; 
+                
+                if (solutionText.length > 0) {
+                    // Substitui a quebra de linha por espaços para evitar problemas no Formsspree
+                    const cleanSolutionText = solutionText.replace(/\n/g, ' '); 
+
+                    // Cria um nome de campo mais limpo e legível (CORREÇÃO DE LEGIBILIDADE)
+                    let readableName = title.substring(0, 70); // Limita o tamanho do nome
+                    readableName = readableName.replace(/[^a-zA-Z0-9\s]/g, ''); // Remove apenas caracteres não-alfanuméricos
+                    readableName = readableName.trim().replace(/\s+/g, ' '); // Mantém espaços simples para maior legibilidade
+                    
+                    // Adiciona um prefixo simples para organização (VUL, OTHER, DG)
+                    const keyType = textarea.getAttribute('data-solution-key').split('-')[0].toUpperCase();
+                    
+                    let prefix = "";
+                    if (keyType === 'VUL') prefix = "VULNERABILIDADE: ";
+                    else if (keyType === 'OTHER') prefix = "OUTRO GESTOR: ";
+                    else if (keyType === 'DG') prefix = "DIREÇÃO GERAL: ";
+                    
+                    const finalName = `${prefix}${readableName}`;
+                    
+                    // Cria o campo oculto com o nome legível e o valor da solução
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = finalName;
+                    hiddenInput.value = cleanSolutionText;
+                    
+                    form.appendChild(hiddenInput);
+                }
+                
+                // IMPORTANTE: Remove o 'name' do textarea original para evitar duplicação e usar apenas os campos ocultos.
+                textarea.removeAttribute('name');
+            });
+
+            // 5. Retorna true para permitir que o Formsspree faça a submissão POST
+            return true;
         }
 
         // --- Funções de Persistência de Dados ---
